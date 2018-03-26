@@ -137,12 +137,16 @@ namespace VtNetCore.Avalonia
         {
             base.OnGotFocus(e);
 
+            Terminal?.FocusIn();
+
             InvalidateVisual();
         }
 
         protected override void OnLostFocus(RoutedEventArgs e)
         {
             base.OnLostFocus(e);
+
+            Terminal?.FocusOut();
 
             InvalidateVisual();
         }
@@ -247,6 +251,25 @@ namespace VtNetCore.Avalonia
             var pointer = e.GetPosition(this);
             var position = ToPosition(pointer);
 
+            var textPosition = position.OffsetBy(0, ViewTop);
+
+            if (Connected && (Terminal.UseAllMouseTracking || Terminal.CellMotionMouseTracking) && position.Column >= 0 && position.Row >= 0 && position.Column < Columns && position.Row < Rows)
+            {
+                var controlPressed = e.InputModifiers.HasFlag(InputModifiers.Control);
+                var shiftPressed = e.InputModifiers.HasFlag(InputModifiers.Shift);
+
+                var button =
+                    e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton) ? 0 :
+                        e.InputModifiers.HasFlag(InputModifiers.RightMouseButton) ? 1 :
+                            e.InputModifiers.HasFlag(InputModifiers.MiddleMouseButton) ? 2 :
+                            3;  // No button
+
+                Terminal.MouseMove(position.Column, position.Row, button, controlPressed, shiftPressed);
+
+                if (button == 3 && !Terminal.UseAllMouseTracking)
+                    return;
+            }
+
             if (MouseOver != null && MouseOver == position)
                 return;
 
@@ -255,7 +278,6 @@ namespace VtNetCore.Avalonia
             if (e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton))
             {
                 TextRange newSelection;
-                var textPosition = position.OffsetBy(0, ViewTop);
 
                 if (MousePressedAt != null && MousePressedAt != textPosition)
                 {
@@ -310,10 +332,14 @@ namespace VtNetCore.Avalonia
             var position = ToPosition(pointer);
 
             var textPosition = position.OffsetBy(0, ViewTop);
-            if (e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton))
-                MousePressedAt = textPosition;
-            else if (e.InputModifiers.HasFlag(InputModifiers.RightMouseButton))
-                PasteClipboard();
+
+            if (!Connected || (Connected && !Terminal.X10SendMouseXYOnButton && !Terminal.X11SendMouseXYOnButton && !Terminal.SgrMouseMode && !Terminal.CellMotionMouseTracking && !Terminal.UseAllMouseTracking))
+            {
+                if (e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton))
+                    MousePressedAt = textPosition;
+                else if (e.InputModifiers.HasFlag(InputModifiers.RightMouseButton))
+                    PasteClipboard();
+            }
 
             if (Connected && position.Column >= 0 && position.Row >= 0 && position.Column < Columns && position.Row < Rows)
             {
@@ -468,10 +494,10 @@ namespace VtNetCore.Avalonia
 
             ProcessTextFormat();
 
-            context.FillRectangle(GetBackgroundBrush(Terminal.CursorState.Attributes, false), new Rect(Bounds.Size));
-
             lock (Terminal)
             {
+                context.FillRectangle(GetBackgroundBrush(Terminal.NullAttribute, false), new Rect(Bounds.Size));
+
                 int row = ViewTop;
                 var verticalOffset = -row * CharacterHeight;
 
@@ -551,7 +577,8 @@ namespace VtNetCore.Avalonia
                                 line[column + 1].Attributes.Underscore == line[column].Attributes.Underscore &&
                                 line[column + 1].Attributes.Reverse == line[column].Attributes.Reverse &&
                                 line[column + 1].Attributes.Bright == line[column].Attributes.Bright &&
-                                line[column + 1].Attributes.Blink == line[column].Attributes.Blink
+                                line[column + 1].Attributes.Blink == line[column].Attributes.Blink &&
+                                line[column + 1].Attributes.Hidden == line[column].Attributes.Hidden
                                 )
                             {
                                 column++;
@@ -560,7 +587,7 @@ namespace VtNetCore.Avalonia
 
                             var showBlink = BlinkVisible();
 
-                            if (!line[column].Attributes.Blink || (line[column].Attributes.Blink && showBlink))
+                            if ((!line[column].Attributes.Blink || (line[column].Attributes.Blink && showBlink)) && !line[column].Attributes.Hidden)
                             {
                                 var rect = new Rect(
                                 spanStart * CharacterWidth,
@@ -683,7 +710,14 @@ namespace VtNetCore.Avalonia
             if (flip)
             {
                 if (attribute.BackgroundRgb == null)
+                {
+                    if (attribute.Bright)
+                    {
+                        return AttributeBrushes[(int)attribute.BackgroundColor + 8];
+                    }
+
                     return AttributeBrushes[(int)attribute.BackgroundColor];
+                }
                 else
                     return new SolidColorBrush(Color.FromArgb(255, (byte)attribute.BackgroundRgb.Red, (byte)attribute.BackgroundRgb.Green, (byte)attribute.BackgroundRgb.Blue));
             }
@@ -692,7 +726,9 @@ namespace VtNetCore.Avalonia
                 if (attribute.ForegroundRgb == null)
                 {
                     if (attribute.Bright)
+                    {
                         return AttributeBrushes[(int)attribute.ForegroundColor + 8];
+                    }
 
                     return AttributeBrushes[(int)attribute.ForegroundColor];
                 }
