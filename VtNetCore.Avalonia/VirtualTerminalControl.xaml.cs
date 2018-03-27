@@ -1,5 +1,6 @@
-﻿using Avalonia;
+using Avalonia;
 using Avalonia.Controls.Primitives;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -84,8 +85,6 @@ namespace VtNetCore.Avalonia
         public int Columns { get; private set; } = -1;
         public int Rows { get; private set; } = -1;
 
-        public IConnection Connection { get; set; }
-
         public VirtualTerminalController Terminal { get; set; } = new VirtualTerminalController();
         public DataConsumer Consumer { get; set; }
         public int ViewTop { get; set; } = 0;
@@ -132,6 +131,16 @@ namespace VtNetCore.Avalonia
             blinkDispatcher.Interval = TimeSpan.FromMilliseconds(Math.Min(150, GCD(BlinkShowMs, BlinkHideMs)));
             blinkDispatcher.Start();
         }
+
+        public static readonly AvaloniaProperty<IConnection> ConnectionProperty =
+            AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(Connection), defaultBindingMode: BindingMode.TwoWay);
+
+        public IConnection Connection
+        {
+            get { return GetValue(ConnectionProperty); }
+            set { SetValue(ConnectionProperty, value); }
+        }
+
 
         protected override void OnGotFocus(GotFocusEventArgs e)
         {

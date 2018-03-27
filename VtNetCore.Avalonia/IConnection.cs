@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace VtNetCore.Avalonia
 {
     public class DataReceivedEventArgs : EventArgs, IEquatable<DataReceivedEventArgs>
     {
-        public byte[] Data { get; internal set; }
+        public byte[] Data { get; set; }
 
         public bool Equals(DataReceivedEventArgs other)
         {
