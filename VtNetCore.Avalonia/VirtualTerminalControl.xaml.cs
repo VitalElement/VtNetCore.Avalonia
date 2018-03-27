@@ -130,16 +130,31 @@ namespace VtNetCore.Avalonia
             blinkDispatcher.Tick += (sender, e) => InvalidateVisual();
             blinkDispatcher.Interval = TimeSpan.FromMilliseconds(Math.Min(150, GCD(BlinkShowMs, BlinkHideMs)));
             blinkDispatcher.Start();
+
+            this.GetObservable(ConnectionProperty).Subscribe(connection =>
+            {
+                if(connection != null)
+                {
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        _connection = connection;
+                        ConnectTo(connection);
+                    });                    
+                }
+            });
         }
 
         public static readonly AvaloniaProperty<IConnection> ConnectionProperty =
-            AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(Connection), defaultBindingMode: BindingMode.TwoWay);
+            AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(ActiveConnection), defaultBindingMode: BindingMode.TwoWay);
 
-        public IConnection Connection
+        private IConnection _connection;
+        public IConnection ActiveConnection
         {
             get { return GetValue(ConnectionProperty); }
             set { SetValue(ConnectionProperty, value); }
         }
+
+        private IConnection Connection => _connection;
 
 
         protected override void OnGotFocus(GotFocusEventArgs e)
@@ -433,7 +448,7 @@ namespace VtNetCore.Avalonia
 
             Connection.Disconnect();
             Connection.DataReceived -= OnDataReceived;
-            Connection = null;
+            _connection = null;
         }
 
         public bool ConnectTo(IConnection connection)
@@ -441,12 +456,12 @@ namespace VtNetCore.Avalonia
             if (Connected)
                 return false;
 
-            Connection = connection;
-            Connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
 
-            Connection.DataReceived += OnDataReceived;
+            connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
 
-            var result = Connection.Connect();
+            connection.DataReceived += OnDataReceived;
+
+            var result = connection.Connect();
 
             return result;
         }
