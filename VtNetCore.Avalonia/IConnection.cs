@@ -18,6 +18,8 @@ namespace VtNetCore.Avalonia
 
         event EventHandler<DataReceivedEventArgs> DataReceived;
 
+        event EventHandler<EventArgs> Closed;
+
         bool Connect();
 
         void Disconnect();
