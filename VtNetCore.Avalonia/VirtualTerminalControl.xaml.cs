@@ -85,7 +85,7 @@ namespace VtNetCore.Avalonia
         public int Columns { get; private set; } = -1;
         public int Rows { get; private set; } = -1;
 
-        public VirtualTerminalController Terminal { get; set; } = new VirtualTerminalController();
+        public VirtualTerminalController Terminal { get; set; }
         public DataConsumer Consumer { get; set; }
         public int ViewTop { get; set; } = 0;
         public string WindowTitle { get; set; } = "Session";
@@ -117,15 +117,38 @@ namespace VtNetCore.Avalonia
             }
         }
 
-        public VirtualTerminalControl()
+        private void Initialise()
         {
+            if (Terminal != null)
+            {
+                Terminal.SendData -= OnSendData;
+                Terminal.WindowTitleChanged -= OnWindowTitleChanged;
+                Terminal.OnLog -= OnLog;
+            }
+
+            Columns = -1;
+            Rows = -1;
+            InputBuffer = "";
+            TerminalIdleSince = DateTime.Now;
+            _rawTextChanged = false;
+            _rawTextString = "";
+            _rawTextLength = 0;
+            _rawText = new char[0];
+            ViewTop = 0;
+            CharacterHeight = -1;
+            CharacterWidth = -1;
+
+            Terminal = new VirtualTerminalController();
             Consumer = new DataConsumer(Terminal);
 
             Terminal.SendData += OnSendData;
             Terminal.WindowTitleChanged += OnWindowTitleChanged;
             Terminal.OnLog += OnLog;
             Terminal.StoreRawText = true;
+        }
 
+        public VirtualTerminalControl()
+        {
             blinkDispatcher = new DispatcherTimer();
             blinkDispatcher.Tick += (sender, e) => InvalidateVisual();
             blinkDispatcher.Interval = TimeSpan.FromMilliseconds(Math.Min(150, GCD(BlinkShowMs, BlinkHideMs)));
@@ -133,13 +156,21 @@ namespace VtNetCore.Avalonia
 
             this.GetObservable(ConnectionProperty).Subscribe(connection =>
             {
-                if(connection != null)
+                if (connection != null)
                 {
                     Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        _connection = connection;
+                        if (_connection != null)
+                        {
+                            Disconnect();
+                        }
+
+                        Initialise();
+                        
                         ConnectTo(connection);
-                    });                    
+
+                        InvalidateVisual();
+                    });
                 }
             });
         }
@@ -463,6 +494,13 @@ namespace VtNetCore.Avalonia
 
             var result = connection.Connect();
 
+            if(!result)
+            {
+                connection.DataReceived -= OnDataReceived;
+            }
+
+            _connection = connection;
+
             return result;
         }
 
@@ -614,11 +652,11 @@ namespace VtNetCore.Avalonia
                             if ((!line[column].Attributes.Blink || (line[column].Attributes.Blink && showBlink)) && !line[column].Attributes.Hidden)
                             {
                                 var rect = new Rect(
-                                spanStart * CharacterWidth,
-                                ((row - (line.DoubleHeightBottom ? 1 : 0)) * CharacterHeight + verticalOffset) * (line.DoubleHeightBottom | line.DoubleHeightTop ? 0.5 : 1.0),
-                                ((column - spanStart + 1) * CharacterWidth) + 0.9,
-                                CharacterHeight + 0.9
-                            );
+                                  spanStart * CharacterWidth,
+                                  ((row - (line.DoubleHeightBottom ? 1 : 0)) * CharacterHeight + verticalOffset) * (line.DoubleHeightBottom | line.DoubleHeightTop ? 0.5 : 1.0),
+                                  ((column - spanStart + 1) * CharacterWidth) + 0.9,
+                                  CharacterHeight + 0.9
+                              );
 
                                 var textLayout = new FormattedText
                                 {
