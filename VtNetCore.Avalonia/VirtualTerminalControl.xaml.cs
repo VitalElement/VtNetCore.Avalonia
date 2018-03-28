@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using VtNetCore.VirtualTerminal;
@@ -166,7 +167,7 @@ namespace VtNetCore.Avalonia
                         }
 
                         Initialise();
-                        
+
                         ConnectTo(connection);
 
                         InvalidateVisual();
@@ -252,7 +253,7 @@ namespace VtNetCore.Avalonia
 
             if (ViewTop != Terminal.ViewPort.TopRow)
             {
-                Terminal.ViewPort.SetTopLine(ViewTop);
+                ViewTop = Terminal.ViewPort.TopRow;
                 InvalidateVisual();
             }
         }
@@ -494,7 +495,7 @@ namespace VtNetCore.Avalonia
 
             var result = connection.Connect();
 
-            if(!result)
+            if (!result)
             {
                 connection.DataReceived -= OnDataReceived;
             }
@@ -550,160 +551,172 @@ namespace VtNetCore.Avalonia
             return (DateTime.Now.Subtract(DateTime.MinValue).Milliseconds % blinkCycle) < BlinkHideMs;
         }
 
-        public override void Render(DrawingContext context)
+        public IBrush GetSolidColorBrush(string hex)
         {
-            var format = new Typeface(FontFamily, FontSize, this.FontStyle, this.FontWeight);
+            byte a = 255; // (byte)(Convert.ToUInt32(hex.Substring(0, 2), 16));
+            byte r = (byte)(Convert.ToUInt32(hex.Substring(1, 2), 16));
+            byte g = (byte)(Convert.ToUInt32(hex.Substring(3, 2), 16));
+            byte b = (byte)(Convert.ToUInt32(hex.Substring(5, 2), 16));
+            return new SolidColorBrush(Color.FromArgb(a, r, g, b));
+        }
 
-            ProcessTextFormat();
-
-            lock (Terminal)
+        private void PaintBackgroundLayer(DrawingContext context, List<VirtualTerminal.Layout.LayoutRow> spans)
+        {
+            double lineY = 0;
+            foreach (var textRow in spans)
             {
-                context.FillRectangle(GetBackgroundBrush(Terminal.NullAttribute, false), new Rect(Bounds.Size));
-
-                int row = ViewTop;
-                var verticalOffset = -row * CharacterHeight;
-
-                var lines = Terminal.ViewPort.GetLines(ViewTop, Rows);
-
-                foreach (var line in lines)
+                using (context.PushPreTransform(Matrix.CreateScale(
+                        (textRow.DoubleWidth ? 2.0 : 1.0),  // Scale double width
+                        (textRow.DoubleHeightBottom | textRow.DoubleHeightTop ? 2.0 : 1.0) // Scale double high
+                    )))
                 {
-                    if (line == null)
+
+                    var drawY =
+                        (lineY - (textRow.DoubleHeightBottom ? CharacterHeight : 0)) *      // Offset position upwards for bottom of double high char
+                        ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0); // Scale position for double height
+
+                    double drawX = 0;
+                    foreach (var textSpan in textRow.Spans)
                     {
-                        row++;
-                        continue;
-                    }
-
-                    int column = 0;
-
-                    using (context.PushPreTransform(Matrix.CreateScale(
-                        line.DoubleWidth ? 2.0 : 1.0,
-                        line.DoubleHeightBottom | line.DoubleHeightTop ? 2.0 : 1.0)))
-                    {
-
-                        var spanStart = 0;
-                        while (column < line.Count)
-                        {
-                            bool selected = TextSelection == null ? false : TextSelection.Within(column, row);
-                            var backgroundColor = GetBackgroundBrush(line[column].Attributes, selected) as SolidColorBrush;
-
-                            if (column < (line.Count - 1) && GetBackgroundBrush(line[column + 1].Attributes, TextSelection == null ? false : TextSelection.Within(column + 1, row)) == backgroundColor)
-                            {
-                                column++;
-                                continue;
-                            }
-
-                            var rect = new Rect(
-                                spanStart * CharacterWidth,
-                                ((row - (line.DoubleHeightBottom ? 1 : 0)) * CharacterHeight + verticalOffset) * (line.DoubleHeightBottom | line.DoubleHeightTop ? 0.5 : 1.0),
-                                ((column - spanStart + 1) * CharacterWidth) + 0.9,
+                        var bounds =
+                            new Rect(
+                                drawX,
+                                drawY,
+                                CharacterWidth * (textSpan.Text.Length) + 0.9,
                                 CharacterHeight + 0.9
                             );
 
-                            context.FillRectangle(new SolidColorBrush(backgroundColor.Color, 0.6), rect);
+                        context.FillRectangle(GetSolidColorBrush(textSpan.BackgroundColor), bounds);
 
-                            column++;
-                            spanStart = column;
-                        }
-
-                        row++;
+                        drawX += CharacterWidth * (textSpan.Text.Length);
                     }
+
+                    lineY += CharacterHeight;
                 }
+            }
+        }
 
-                row = ViewTop;
-                foreach (var line in lines)
+        private void PaintTextLayer(DrawingContext context, List<VirtualTerminal.Layout.LayoutRow> spans, Typeface textFormat, bool showBlink)
+        {
+            var dipToDpiRatio = 96 / 96; // TODO read screen dpi.
+
+            double lineY = 0;
+            foreach (var textRow in spans)
+            {
+                using (context.PushPreTransform(Matrix.CreateScale(
+                        (textRow.DoubleWidth ? 2.0 : 1.0),  // Scale double width
+                        (textRow.DoubleHeightBottom | textRow.DoubleHeightTop ? 2.0 : 1.0) // Scale double high
+                    )))
                 {
-                    if (line == null)
+                    var drawY =
+                        (lineY - (textRow.DoubleHeightBottom ? CharacterHeight : 0)) *      // Offset position upwards for bottom of double high char
+                        ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0); // Scale position for double height
+
+                    double drawX = 0;
+                    foreach (var textSpan in textRow.Spans)
                     {
-                        row++;
-                        continue;
-                    }
+                        var runWidth = CharacterWidth * (textSpan.Text.Length);
 
-                    int column = 0;
-
-                    using (context.PushPreTransform(Matrix.CreateScale(
-                       line.DoubleWidth ? 2.0 : 1.0,
-                        line.DoubleHeightBottom | line.DoubleHeightTop ? 2.0 : 1.0)))
-                    {
-
-                        var spanStart = 0;
-                        string toDisplay = string.Empty;
-                        while (column < line.Count)
+                        if (textSpan.Hidden || (textSpan.Blink && !showBlink))
                         {
-                            bool selected = TextSelection == null ? false : TextSelection.Within(column, row);
-                            var foregroundColor = GetForegroundBrush(line[column].Attributes, selected);
-
-                            toDisplay += line[column].Char.ToString() + line[column].CombiningCharacters;
-                            if (
-                                column < (line.Count - 1) &&
-                                GetForegroundBrush(line[column + 1].Attributes, TextSelection == null ? false : TextSelection.Within(column + 1, row)) == foregroundColor &&
-                                line[column + 1].Attributes.Underscore == line[column].Attributes.Underscore &&
-                                line[column + 1].Attributes.Reverse == line[column].Attributes.Reverse &&
-                                line[column + 1].Attributes.Bright == line[column].Attributes.Bright &&
-                                line[column + 1].Attributes.Blink == line[column].Attributes.Blink &&
-                                line[column + 1].Attributes.Hidden == line[column].Attributes.Hidden
-                                )
-                            {
-                                column++;
-                                continue;
-                            }
-
-                            var showBlink = BlinkVisible();
-
-                            if ((!line[column].Attributes.Blink || (line[column].Attributes.Blink && showBlink)) && !line[column].Attributes.Hidden)
-                            {
-                                var rect = new Rect(
-                                  spanStart * CharacterWidth,
-                                  ((row - (line.DoubleHeightBottom ? 1 : 0)) * CharacterHeight + verticalOffset) * (line.DoubleHeightBottom | line.DoubleHeightTop ? 0.5 : 1.0),
-                                  ((column - spanStart + 1) * CharacterWidth) + 0.9,
-                                  CharacterHeight + 0.9
-                              );
-
-                                var textLayout = new FormattedText
-                                {
-                                    Text = toDisplay,
-                                    Typeface = format
-                                };
-
-                                context.DrawText(
-                                    foregroundColor,
-                                    rect.TopLeft,
-                                    textLayout
-                                );
-
-                                if (line[column].Attributes.Underscore)
-                                {
-                                    context.DrawLine(new Pen(foregroundColor), rect.BottomLeft, rect.BottomRight);
-                                }
-                            }
-
-                            column++;
-                            spanStart = column;
-                            toDisplay = "";
+                            drawX += runWidth;
+                            continue;
                         }
 
-                        row++;
-                    }
-                }
+                        var color = GetSolidColorBrush(textSpan.ForgroundColor);
 
-                if (Terminal.CursorState.ShowCursor)
+                        var typeface = new Typeface(textFormat.FontFamilyName, textFormat.FontSize, FontStyle.Normal, textSpan.Bold ? FontWeight.Bold : FontWeight.Light);
+
+                        var textLayout = new FormattedText()
+                        {
+                            Text = textSpan.Text,
+                            Typeface = typeface
+                        };
+
+                        context.DrawText(color, new Point(drawX, drawY), textLayout);
+
+                        // TODO : Come up with a better means of identifying line weight and offset
+                        double underlineOffset = dipToDpiRatio * 1.07;
+
+                        if (textSpan.Underline)
+                        {
+                            context.DrawLine(new Pen(color), new Point(drawX, drawY + underlineOffset), new Point(drawX + runWidth, drawY + underlineOffset));
+                        }
+
+                        drawX += CharacterWidth * (textSpan.Text.Length);
+                    }
+
+                    lineY += CharacterHeight;
+                }
+            }
+        }
+
+        private void PaintCursor(DrawingContext context, List<VirtualTerminal.Layout.LayoutRow> spans, Typeface textFormat, TextPosition cursorPosition, IBrush cursorColor)
+        {
+            var cursorY = cursorPosition.Row;
+
+            var textRow = spans[cursorY];
+
+            using (context.PushPreTransform(Matrix.CreateTranslation(
+                    1.0f,
+                    (textRow.DoubleHeightBottom ? -CharacterHeight : 0)
+                ) *
+                Matrix.CreateScale(
+                    (textRow.DoubleWidth ? 2.0 : 1.0),
+                    (textRow.DoubleHeightBottom | textRow.DoubleHeightTop ? 2.0 : 1.0)
+                )))
+            {
+
+                var drawX = cursorPosition.Column * CharacterWidth;
+                var drawY = (cursorY * CharacterHeight) * ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0);
+
+                var cursorRect = new Rect(
+                    drawX,
+                    drawY,
+                    CharacterWidth,
+                    CharacterHeight + 0.9
+                );
+
+                if (IsFocused)
                 {
-                    var cursorY = Terminal.ViewPort.TopRow - ViewTop + Terminal.CursorState.CurrentRow;
-                    var cursorRect = new Rect(
-                        Terminal.CursorState.CurrentColumn * CharacterWidth,
-                        cursorY * CharacterHeight,
-                        CharacterWidth + 0.9,
-                        CharacterHeight + 0.9
-                    );
-
-                    if (IsFocused)
-                    {
-                        context.FillRectangle(GetForegroundBrush(Terminal.CursorState.Attributes, false), cursorRect);
-                    }
-                    else
-                    {
-                        context.DrawRectangle(new Pen(GetForegroundBrush(Terminal.CursorState.Attributes, false)), cursorRect);
-                    }
+                    context.FillRectangle(cursorColor, cursorRect);
                 }
+                else
+                {
+                    context.DrawRectangle(new Pen(cursorColor), cursorRect);
+                }
+            }
+        }
+
+        public override void Render(DrawingContext context)
+        {
+            var textFormat =
+                new Typeface(FontFamily, FontSize, FontStyle, FontWeight);
+
+            ProcessTextFormat(context, textFormat);
+
+            var showBlink = BlinkVisible();
+
+            List<VirtualTerminal.Layout.LayoutRow> spans = null;
+            TextPosition cursorPosition = null;
+            bool showCursor = false;
+            IBrush cursorColor = Brushes.Green;
+
+            lock (Terminal)
+            {
+                spans = Terminal.ViewPort.GetPageSpans(ViewTop, Rows, Columns, TextSelection);
+                showCursor = Terminal.CursorState.ShowCursor;
+                cursorPosition = Terminal.ViewPort.CursorPosition.Clone();
+                cursorColor = GetSolidColorBrush(Terminal.CursorState.Attributes.WebColor);
+            }
+
+            PaintBackgroundLayer(context, spans);
+
+            PaintTextLayer(context, spans, textFormat, showBlink);
+
+            if (showCursor)
+            {
+                PaintCursor(context, spans, textFormat, cursorPosition, cursorColor);
             }
 
             if (ViewDebugging)
@@ -799,15 +812,17 @@ namespace VtNetCore.Avalonia
             }
         }
 
-        private void ProcessTextFormat()
+        private void ProcessTextFormat(DrawingContext drawingSession, Typeface format)
         {
             var textLayout = new FormattedText
             {
-                Text = "Q",
-                Typeface = new Typeface(FontFamily, FontSize, this.FontStyle, this.FontWeight)
+                Text = "\u2560",
+                Typeface = format,
+                Wrapping = TextWrapping.NoWrap,
             };
 
             var size = textLayout.Measure();
+
             if (CharacterWidth != size.Width || CharacterHeight != size.Height)
             {
                 CharacterWidth = size.Width;
