@@ -625,7 +625,7 @@ namespace VtNetCore.Avalonia
 
                         var color = GetSolidColorBrush(textSpan.ForgroundColor);
 
-                        var typeface = new Typeface(textFormat.FontFamilyName, textFormat.FontSize, FontStyle.Normal, textSpan.Bold ? FontWeight.Bold : FontWeight.Light);
+                        var typeface = new Typeface(textFormat.FontFamily, textFormat.FontSize, FontStyle.Normal, textSpan.Bold ? FontWeight.Bold : FontWeight.Light);
 
                         var textLayout = new FormattedText()
                         {
