@@ -750,7 +750,7 @@ namespace VtNetCore.Avalonia
 
             var bigText = Terminal.DebugText;
             var bigTextLayout = new FormattedText { Text = bigText, Typeface = lineNumberFormat };
-            context.DrawText(Brushes.Yellow, new Point((Bounds.Size.Width - bigTextLayout.Measure().Width - 100), 0), bigTextLayout);
+            context.DrawText(Brushes.Yellow, new Point((Bounds.Size.Width - bigTextLayout.Bounds.Width - 100), 0), bigTextLayout);
         }
 
         private IBrush GetBackgroundBrush(TerminalAttribute attribute, bool invert)
@@ -821,7 +821,7 @@ namespace VtNetCore.Avalonia
                 Wrapping = TextWrapping.NoWrap,
             };
 
-            var size = textLayout.Measure();
+            var size = textLayout.Bounds;
 
             if (CharacterWidth != size.Width || CharacterHeight != size.Height)
             {
