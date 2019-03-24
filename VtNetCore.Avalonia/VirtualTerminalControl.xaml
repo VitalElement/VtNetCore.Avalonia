@@ -1,17 +1,19 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:local="clr-namespace:VtNetCore.Avalonia;assembly=VtNetCore.Avalonia">
-  <Style Selector="local|VirtualTerminalControl">
-    <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLightBrush}"/>
-    <Setter Property="BorderThickness" Value="{DynamicResource ThemeBorderThickness}"/>
-    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
-    <Setter Property="Focusable" Value="True" />
-    <Setter Property="Padding" Value="4"/>
-    <Setter Property="FontFamily" Value="Source Code Pro" />
-    <Setter Property="Cursor" Value="IBeam" />
-    <Setter Property="Template">
-      <ControlTemplate>
-        <Grid/>
-      </ControlTemplate>
-    </Setter>
-  </Style>
+    <Style Selector="local|VirtualTerminalControl">
+        <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLightBrush}"/>
+        <Setter Property="BorderThickness" Value="{DynamicResource ThemeBorderThickness}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="FontFamily" Value="{DynamicResource EditorFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="10" />
+        <Setter Property="Cursor" Value="IBeam" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel />
+            </ControlTemplate>
+        </Setter>
+    </Style>
 </Styles>

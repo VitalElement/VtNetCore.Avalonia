@@ -152,8 +152,8 @@ namespace VtNetCore.Avalonia
         {
             blinkDispatcher = new DispatcherTimer();
             blinkDispatcher.Tick += (sender, e) => InvalidateVisual();
-            blinkDispatcher.Interval = TimeSpan.FromMilliseconds(Math.Min(150, GCD(BlinkShowMs, BlinkHideMs)));
-            blinkDispatcher.Start();
+            blinkDispatcher.Interval = TimeSpan.FromMilliseconds(GCD(BlinkShowMs, BlinkHideMs));
+            //blinkDispatcher.Start();
 
             this.GetObservable(ConnectionProperty).Subscribe(connection =>
             {
