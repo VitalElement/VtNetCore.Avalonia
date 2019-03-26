@@ -655,35 +655,38 @@ namespace VtNetCore.Avalonia
         {
             var cursorY = cursorPosition.Row;
 
-            var textRow = spans[cursorY];
-
-            using (context.PushPreTransform(Matrix.CreateTranslation(
-                    1.0f,
-                    (textRow.DoubleHeightBottom ? -CharacterHeight : 0)
-                ) *
-                Matrix.CreateScale(
-                    (textRow.DoubleWidth ? 2.0 : 1.0),
-                    (textRow.DoubleHeightBottom | textRow.DoubleHeightTop ? 2.0 : 1.0)
-                )))
+            if (cursorY >= 0)
             {
+                var textRow = spans[cursorY];
 
-                var drawX = cursorPosition.Column * CharacterWidth;
-                var drawY = (cursorY * CharacterHeight) * ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0);
-
-                var cursorRect = new Rect(
-                    drawX,
-                    drawY,
-                    CharacterWidth,
-                    CharacterHeight + 0.9
-                );
-
-                if (IsFocused)
+                using (context.PushPreTransform(Matrix.CreateTranslation(
+                        1.0f,
+                        (textRow.DoubleHeightBottom ? -CharacterHeight : 0)
+                    ) *
+                    Matrix.CreateScale(
+                        (textRow.DoubleWidth ? 2.0 : 1.0),
+                        (textRow.DoubleHeightBottom | textRow.DoubleHeightTop ? 2.0 : 1.0)
+                    )))
                 {
-                    context.FillRectangle(cursorColor, cursorRect);
-                }
-                else
-                {
-                    context.DrawRectangle(new Pen(cursorColor), cursorRect);
+
+                    var drawX = cursorPosition.Column * CharacterWidth;
+                    var drawY = (cursorY * CharacterHeight) * ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0);
+
+                    var cursorRect = new Rect(
+                        drawX,
+                        drawY,
+                        CharacterWidth,
+                        CharacterHeight + 0.9
+                    );
+
+                    if (IsFocused)
+                    {
+                        context.FillRectangle(cursorColor, cursorRect);
+                    }
+                    else
+                    {
+                        context.DrawRectangle(new Pen(cursorColor), cursorRect);
+                    }
                 }
             }
         }
