@@ -6,7 +6,6 @@
         <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
         <Setter Property="Focusable" Value="True" />
         <Setter Property="Padding" Value="4"/>
-        <Setter Property="FontFamily" Value="{DynamicResource EditorFont}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="10" />
         <Setter Property="Cursor" Value="IBeam" />

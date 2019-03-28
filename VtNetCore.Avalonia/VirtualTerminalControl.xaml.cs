@@ -7,6 +7,8 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using System;
 using System.Collections.Generic;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VtNetCore.VirtualTerminal;
@@ -17,6 +19,8 @@ namespace VtNetCore.Avalonia
 {
     public class VirtualTerminalControl : TemplatedControl
     {
+        private CompositeDisposable _disposables;
+
         private int BlinkShowMs { get; set; } = 600;
         private int BlinkHideMs { get; set; } = 300;
 
@@ -479,7 +483,8 @@ namespace VtNetCore.Avalonia
                 return;
 
             Connection.Disconnect();
-            Connection.DataReceived -= OnDataReceived;
+            _disposables.Dispose();
+            _disposables = null;
             _connection = null;
         }
 
@@ -488,16 +493,20 @@ namespace VtNetCore.Avalonia
             if (Connected)
                 return false;
 
+            _disposables = new CompositeDisposable();
 
             connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
 
-            connection.DataReceived += OnDataReceived;
+            _disposables.Add(Observable.FromEventPattern<DataReceivedEventArgs>(connection, nameof(connection.DataReceived))
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(args => OnDataReceived(args.EventArgs)));
 
             var result = connection.Connect();
 
             if (!result)
             {
-                connection.DataReceived -= OnDataReceived;
+                _disposables.Dispose();
+                _disposables = null;
             }
 
             _connection = connection;
@@ -505,7 +514,7 @@ namespace VtNetCore.Avalonia
             return result;
         }
 
-        private void OnDataReceived(object sender, DataReceivedEventArgs e)
+        private void OnDataReceived(DataReceivedEventArgs e)
         {
             lock (Terminal)
             {
