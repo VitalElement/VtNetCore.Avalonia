@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Input;
@@ -161,22 +162,24 @@ namespace VtNetCore.Avalonia
 
             this.GetObservable(ConnectionProperty).Subscribe(connection =>
             {
-                if (connection != null)
-                {
                     Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (_connection != null)
+                        bool changed = _connection != connection && connection != null;
+
+                        if (connection != null && _connection != connection && _connection != null)
                         {
                             Disconnect();
                         }
 
-                        Initialise();
+                        if (changed)
+                        {
+                            Initialise();
 
-                        ConnectTo(connection);
+                            ConnectTo(connection);
 
-                        InvalidateVisual();
+                            InvalidateVisual();
+                        }
                     });
-                }
             });
         }
 
@@ -479,10 +482,6 @@ namespace VtNetCore.Avalonia
 
         public void Disconnect()
         {
-            if (!Connected)
-                return;
-
-            Connection.Disconnect();
             _disposables.Dispose();
             _disposables = null;
             _connection = null;
@@ -490,9 +489,6 @@ namespace VtNetCore.Avalonia
 
         public bool ConnectTo(IConnection connection)
         {
-            if (Connected)
-                return false;
-
             _disposables = new CompositeDisposable();
 
             connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
@@ -571,6 +567,11 @@ namespace VtNetCore.Avalonia
 
         private void PaintBackgroundLayer(DrawingContext context, List<VirtualTerminal.Layout.LayoutRow> spans)
         {
+            if(spans == null)
+            {
+                return;
+            }
+
             double lineY = 0;
             foreach (var textRow in spans)
             {
@@ -607,6 +608,11 @@ namespace VtNetCore.Avalonia
 
         private void PaintTextLayer(DrawingContext context, List<VirtualTerminal.Layout.LayoutRow> spans, Typeface textFormat, bool showBlink)
         {
+            if(spans == null)
+            {
+                return;
+
+            }
             var dipToDpiRatio = 96 / 96; // TODO read screen dpi.
 
             double lineY = 0;
@@ -664,7 +670,7 @@ namespace VtNetCore.Avalonia
         {
             var cursorY = cursorPosition.Row;
 
-            if (cursorY >= 0)
+            if (cursorY >= 0 && spans != null)
             {
                 var textRow = spans[cursorY];
 
@@ -714,12 +720,15 @@ namespace VtNetCore.Avalonia
             bool showCursor = false;
             IBrush cursorColor = Brushes.Green;
 
-            lock (Terminal)
+            if (Terminal != null)
             {
-                spans = Terminal.ViewPort.GetPageSpans(ViewTop, Rows, Columns, TextSelection);
-                showCursor = Terminal.CursorState.ShowCursor;
-                cursorPosition = Terminal.ViewPort.CursorPosition.Clone();
-                cursorColor = GetSolidColorBrush(Terminal.CursorState.Attributes.WebColor);
+                lock (Terminal)
+                {
+                    spans = Terminal.ViewPort.GetPageSpans(ViewTop, Rows, Columns, TextSelection);
+                    showCursor = Terminal.CursorState.ShowCursor;
+                    cursorPosition = Terminal.ViewPort.CursorPosition.Clone();
+                    cursorColor = GetSolidColorBrush(Terminal.CursorState.Attributes.WebColor);
+                }
             }
 
             PaintBackgroundLayer(context, spans);
@@ -856,7 +865,7 @@ namespace VtNetCore.Avalonia
 
         private void ResizeTerminal()
         {
-            Terminal.ResizeView(Columns, Rows);
+            Terminal?.ResizeView(Columns, Rows);
         }
 
         TextPosition MouseOver { get; set; } = new TextPosition();
