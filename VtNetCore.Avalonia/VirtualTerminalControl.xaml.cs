@@ -21,6 +21,9 @@ namespace VtNetCore.Avalonia
     public class VirtualTerminalControl : TemplatedControl
     {
         private CompositeDisposable _disposables;
+        private CompositeDisposable _terminalDisposables;
+
+        private VirtualTerminalController _terminal;
 
         private int BlinkShowMs { get; set; } = 600;
         private int BlinkHideMs { get; set; } = 300;
@@ -90,8 +93,6 @@ namespace VtNetCore.Avalonia
         public double CharacterHeight { get; private set; } = -1;
         public int Columns { get; private set; } = -1;
         public int Rows { get; private set; } = -1;
-
-        public VirtualTerminalController Terminal { get; set; }
         public DataConsumer Consumer { get; set; }
         public int ViewTop { get; set; } = 0;
         public string WindowTitle { get; set; } = "Session";
@@ -123,34 +124,9 @@ namespace VtNetCore.Avalonia
             }
         }
 
-        private void Initialise()
+        static VirtualTerminalControl()
         {
-            if (Terminal != null)
-            {
-                Terminal.SendData -= OnSendData;
-                Terminal.WindowTitleChanged -= OnWindowTitleChanged;
-                Terminal.OnLog -= OnLog;
-            }
-
-            Columns = -1;
-            Rows = -1;
-            InputBuffer = "";
-            TerminalIdleSince = DateTime.Now;
-            _rawTextChanged = false;
-            _rawTextString = "";
-            _rawTextLength = 0;
-            _rawText = new char[0];
-            ViewTop = 0;
-            CharacterHeight = -1;
-            CharacterWidth = -1;
-
-            Terminal = new VirtualTerminalController();
-            Consumer = new DataConsumer(Terminal);
-
-            Terminal.SendData += OnSendData;
-            Terminal.WindowTitleChanged += OnWindowTitleChanged;
-            Terminal.OnLog += OnLog;
-            Terminal.StoreRawText = true;
+            AffectsRender<VirtualTerminalControl>(ConnectionProperty);
         }
 
         public VirtualTerminalControl()
@@ -160,41 +136,93 @@ namespace VtNetCore.Avalonia
             blinkDispatcher.Interval = TimeSpan.FromMilliseconds(GCD(BlinkShowMs, BlinkHideMs));
             //blinkDispatcher.Start();
 
-            this.GetObservable(ConnectionProperty).Subscribe(connection =>
-            {
-                    Dispatcher.UIThread.InvokeAsync(() =>
+
+
+            this.GetObservable(TerminalProperty)
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(terminal =>
+                {
+                    if(_terminalDisposables != null)
                     {
-                        bool changed = _connection != connection && connection != null;
+                        _terminalDisposables.Dispose();
+                        _terminalDisposables = null;
+                        Consumer = null;
+                    }
 
-                        if (connection != null && _connection != connection && _connection != null)
-                        {
-                            Disconnect();
-                        }
+                    Columns = -1;
+                    Rows = -1;
+                    InputBuffer = "";
+                    TerminalIdleSince = DateTime.Now;
+                    _rawTextChanged = false;
+                    _rawTextString = "";
+                    _rawTextLength = 0;
+                    _rawText = new char[0];
+                    ViewTop = 0;
+                    CharacterHeight = -1;
+                    CharacterWidth = -1;
 
-                        if (changed)
-                        {
-                            Initialise();
+                    if (terminal != null)
+                    {
+                        _terminalDisposables = new CompositeDisposable();
+                        Consumer = new DataConsumer(terminal);
 
-                            ConnectTo(connection);
+                        _terminalDisposables.Add(
+                            Observable.FromEventPattern<SendDataEventArgs>(terminal, nameof(terminal.SendData)).Subscribe(e => OnSendData(e.EventArgs)));
+                        
+                        _terminalDisposables.Add(
+                            Observable.FromEventPattern<TextEventArgs>(terminal, nameof(terminal.WindowTitleChanged))
+                            .ObserveOn(AvaloniaScheduler.Instance)
+                            .Subscribe(e => WindowTitle = e.EventArgs.Text));
+                        
+                        terminal.StoreRawText = true;
+                    }
+                });
 
-                            InvalidateVisual();
-                        }
-                    });
+            this.GetObservable(ConnectionProperty)
+                .ObserveOn(AvaloniaScheduler.Instance)
+                .Subscribe(connection =>
+            {
+                if (_disposables != null)
+                {
+                    _disposables.Dispose();
+                    _disposables = null;
+                }
+
+                _disposables = new CompositeDisposable();
+
+                if (connection != null)
+                {
+                    Console.WriteLine("New Connection");
+                    _disposables.Add(Observable.FromEventPattern<DataReceivedEventArgs>(connection, nameof(connection.DataReceived))
+                        .ObserveOn(AvaloniaScheduler.Instance)
+                        .Subscribe(args => OnDataReceived(args.EventArgs)));
+
+                    connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
+                }
+                else
+                {
+                    Console.WriteLine("null connection");
+                }
             });
         }
 
         public static readonly AvaloniaProperty<IConnection> ConnectionProperty =
-            AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(ActiveConnection), defaultBindingMode: BindingMode.TwoWay);
+            AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(Connection));
 
-        private IConnection _connection;
-        public IConnection ActiveConnection
+        public IConnection Connection
         {
             get { return GetValue(ConnectionProperty); }
             set { SetValue(ConnectionProperty, value); }
         }
 
-        private IConnection Connection => _connection;
+        public static readonly AvaloniaProperty<VirtualTerminalController> TerminalProperty =
+            AvaloniaProperty.Register<VirtualTerminalControl, VirtualTerminalController>(nameof(Terminal));
 
+        public VirtualTerminalController Terminal
+        {
+            get => GetValue(TerminalProperty);
+            set => SetValue(TerminalProperty, value);
+        }
 
         protected override void OnGotFocus(GotFocusEventArgs e)
         {
@@ -212,6 +240,16 @@ namespace VtNetCore.Avalonia
             Terminal?.FocusOut();
 
             InvalidateVisual();
+        }
+
+        protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            _terminalDisposables.Dispose();
+            _disposables.Dispose();
+            _terminalDisposables = null;
+            _disposables = null;
+
+            base.OnDetachedFromVisualTree(e);
         }
 
         protected override void OnTextInput(TextInputEventArgs e)
@@ -454,60 +492,22 @@ namespace VtNetCore.Avalonia
             }
         }
 
-        private void OnLog(object sender, TextEventArgs e)
-        {
-            //LogText += (e.Text.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t") + "\n");
-        }
-
-        private void OnWindowTitleChanged(object sender, TextEventArgs e)
-        {
-            WindowTitle = e.Text;
-        }
-
-        private void OnSendData(object sender, SendDataEventArgs e)
+        private void OnSendData(SendDataEventArgs e)
         {
             if (!Connected)
                 return;
 
+            var connection = Connection;
+
             Task.Run(() =>
             {
-                Connection.SendData(e.Data);
+                connection.SendData(e.Data);
             });
         }
 
         public bool Connected
         {
             get { return Connection != null && Connection.IsConnected; }
-        }
-
-        public void Disconnect()
-        {
-            _disposables.Dispose();
-            _disposables = null;
-            _connection = null;
-        }
-
-        public bool ConnectTo(IConnection connection)
-        {
-            _disposables = new CompositeDisposable();
-
-            connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
-
-            _disposables.Add(Observable.FromEventPattern<DataReceivedEventArgs>(connection, nameof(connection.DataReceived))
-                .ObserveOn(AvaloniaScheduler.Instance)
-                .Subscribe(args => OnDataReceived(args.EventArgs)));
-
-            var result = connection.Connect();
-
-            if (!result)
-            {
-                _disposables.Dispose();
-                _disposables = null;
-            }
-
-            _connection = connection;
-
-            return result;
         }
 
         private void OnDataReceived(DataReceivedEventArgs e)
@@ -893,13 +893,13 @@ namespace VtNetCore.Avalonia
             if (Connection == null)
                 return;
 
+            var buffer = Encoding.UTF8.GetBytes(text);
+
+            var connection = Connection;
+
             Task.Run(() =>
             {
-                var buffer = Encoding.UTF8.GetBytes(text);
-                Task.Run(() =>
-                {
-                    Connection.SendData(buffer);
-                });
+                connection.SendData(buffer);
             });
         }
 
