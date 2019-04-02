@@ -192,16 +192,11 @@ namespace VtNetCore.Avalonia
 
                 if (connection != null)
                 {
-                    Console.WriteLine("New Connection");
                     _disposables.Add(Observable.FromEventPattern<DataReceivedEventArgs>(connection, nameof(connection.DataReceived))
                         .ObserveOn(AvaloniaScheduler.Instance)
                         .Subscribe(args => OnDataReceived(args.EventArgs)));
 
                     connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
-                }
-                else
-                {
-                    Console.WriteLine("null connection");
                 }
             });
         }
