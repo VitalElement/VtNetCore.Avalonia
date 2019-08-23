@@ -263,8 +263,8 @@ namespace VtNetCore.Avalonia
             if (!Connected)
                 return;
 
-            var controlPressed = e.Modifiers.HasFlag(InputModifiers.Control);
-            var shiftPressed = e.Modifiers.HasFlag(InputModifiers.Shift);
+            var controlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            var shiftPressed = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
             if (controlPressed)
             {
@@ -302,7 +302,7 @@ namespace VtNetCore.Avalonia
         {
             var pointer = e.GetPosition(this);
 
-            var controlPressed = e.InputModifiers.HasFlag(InputModifiers.Control);
+            var controlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
 
             if (controlPressed)
             {
@@ -351,8 +351,8 @@ namespace VtNetCore.Avalonia
 
             if (Connected && (Terminal.UseAllMouseTracking || Terminal.CellMotionMouseTracking) && position.Column >= 0 && position.Row >= 0 && position.Column < Columns && position.Row < Rows)
             {
-                var controlPressed = e.InputModifiers.HasFlag(InputModifiers.Control);
-                var shiftPressed = e.InputModifiers.HasFlag(InputModifiers.Shift);
+                var controlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+                var shiftPressed = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
                 var button =
                     e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton) ? 0 :
@@ -439,8 +439,8 @@ namespace VtNetCore.Avalonia
 
             if (Connected && position.Column >= 0 && position.Row >= 0 && position.Column < Columns && position.Row < Rows)
             {
-                var controlPressed = e.InputModifiers.HasFlag(InputModifiers.Control);
-                var shiftPressed = e.InputModifiers.HasFlag(InputModifiers.Shift);
+                var controlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+                var shiftPressed = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
                 var button =
                     e.InputModifiers.HasFlag(InputModifiers.LeftMouseButton) ? 0 :
@@ -480,8 +480,8 @@ namespace VtNetCore.Avalonia
 
             if (Connected && position.Column >= 0 && position.Row >= 0 && position.Column < Columns && position.Row < Rows)
             {
-                var controlPressed = e.InputModifiers.HasFlag(InputModifiers.Control);
-                var shiftPressed = e.InputModifiers.HasFlag(InputModifiers.Shift);
+                var controlPressed = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+                var shiftPressed = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
                 Terminal.MouseRelease(position.Column, position.Row, controlPressed, shiftPressed);
             }
