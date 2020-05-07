@@ -201,7 +201,7 @@ namespace VtNetCore.Avalonia
             });
         }
 
-        public static readonly AvaloniaProperty<IConnection> ConnectionProperty =
+        public static readonly StyledProperty<IConnection> ConnectionProperty =
             AvaloniaProperty.Register<VirtualTerminalControl, IConnection>(nameof(Connection));
 
         public IConnection Connection
@@ -210,7 +210,7 @@ namespace VtNetCore.Avalonia
             set { SetValue(ConnectionProperty, value); }
         }
 
-        public static readonly AvaloniaProperty<VirtualTerminalController> TerminalProperty =
+        public static readonly StyledProperty<VirtualTerminalController> TerminalProperty =
             AvaloniaProperty.Register<VirtualTerminalControl, VirtualTerminalController>(nameof(Terminal));
 
         public VirtualTerminalController Terminal
@@ -635,12 +635,13 @@ namespace VtNetCore.Avalonia
 
                         var color = GetSolidColorBrush(textSpan.ForgroundColor);
 
-                        var typeface = new Typeface(textFormat.FontFamily, textFormat.FontSize, FontStyle.Normal, textSpan.Bold ? FontWeight.Bold : FontWeight.Light);
+                        var typeface = new Typeface(textFormat.FontFamily, textSpan.Bold ? FontWeight.Bold : FontWeight.Light, FontStyle.Normal);
 
                         var textLayout = new FormattedText()
                         {
                             Text = textSpan.Text,
-                            Typeface = typeface
+                            Typeface = typeface,
+                            FontSize = FontSize
                         };
 
                         context.DrawText(color, new Point(drawX, drawY), textLayout);
@@ -704,7 +705,7 @@ namespace VtNetCore.Avalonia
         public override void Render(DrawingContext context)
         {
             var textFormat =
-                new Typeface(FontFamily, FontSize, FontStyle, FontWeight);
+                new Typeface(FontFamily, FontWeight, FontStyle);            
 
             ProcessTextFormat(context, textFormat);
 
@@ -743,7 +744,7 @@ namespace VtNetCore.Avalonia
 
         private void AnnotateView(DrawingContext context)
         {
-            var lineNumberFormat = new Typeface(FontFamily, FontSize / 2, FontStyle, FontWeight);
+            var lineNumberFormat = new Typeface(FontFamily, FontWeight, FontStyle);
 
             for (var i = 0; i < Rows; i++)
             {
@@ -751,7 +752,8 @@ namespace VtNetCore.Avalonia
                 var textLayout = new FormattedText
                 {
                     Text = s.ToString(),
-                    Typeface = lineNumberFormat
+                    Typeface = lineNumberFormat,
+                    FontSize = FontSize
                 };
 
                 var y = i * CharacterHeight;
@@ -760,12 +762,12 @@ namespace VtNetCore.Avalonia
 
                 s = (i + 1).ToString();
 
-                textLayout = new FormattedText { Text = s.ToString(), Typeface = lineNumberFormat };
+                textLayout = new FormattedText { Text = s.ToString(), Typeface = lineNumberFormat, FontSize = FontSize };
                 context.DrawText(Brushes.Green, new Point((Bounds.Size.Width - (CharacterWidth / 2 * (s.Length + 3))), y), textLayout);
             }
 
             var bigText = Terminal.DebugText;
-            var bigTextLayout = new FormattedText { Text = bigText, Typeface = lineNumberFormat };
+            var bigTextLayout = new FormattedText { Text = bigText, Typeface = lineNumberFormat, FontSize = FontSize };
             context.DrawText(Brushes.Yellow, new Point((Bounds.Size.Width - bigTextLayout.Bounds.Width - 100), 0), bigTextLayout);
         }
 
@@ -834,7 +836,8 @@ namespace VtNetCore.Avalonia
             {
                 Text = "\u2560",
                 Typeface = format,
-                Wrapping = TextWrapping.NoWrap,
+                TextWrapping = TextWrapping.NoWrap,
+                FontSize = FontSize
             };
 
             var size = textLayout.Bounds;
