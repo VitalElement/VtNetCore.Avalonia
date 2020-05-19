@@ -324,7 +324,7 @@ namespace VtNetCore.Avalonia
 
             if (controlPressed)
             {
-                double scale = 0.9 * (e.Delta.Y / 120);
+                double scale = 0.9 * (e.Delta.Y);
 
                 var newFontSize = FontSize;
                 if (scale < 0)
