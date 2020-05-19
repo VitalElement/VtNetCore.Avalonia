@@ -3,6 +3,8 @@ using Avalonia;
 using Avalonia.Logging.Serilog;
 using VtNetCore.Avalonia.App.ViewModels;
 using VtNetCore.Avalonia.App.Views;
+using ReactiveUI;
+using Avalonia.ReactiveUI;
 
 namespace VtNetCore.Avalonia.App
 {
