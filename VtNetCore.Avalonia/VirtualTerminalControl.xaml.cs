@@ -237,6 +237,15 @@ namespace VtNetCore.Avalonia
             set => SetValue(TerminalProperty, value);
         }
 
+        public static readonly AvaloniaProperty<Thickness> TextPaddingProperty =
+           AvaloniaProperty.Register<VirtualTerminalControl, Thickness>(nameof(TextPadding));
+
+        public Thickness TextPadding
+        {
+            get => GetValue(TextPaddingProperty);
+            set => SetValue(TextPaddingProperty, value);
+        }
+
         protected override void OnGotFocus(GotFocusEventArgs e)
         {
             base.OnGotFocus(e);
@@ -647,7 +656,8 @@ namespace VtNetCore.Avalonia
                         (lineY - (textRow.DoubleHeightBottom ? CharacterHeight : 0)) *      // Offset position upwards for bottom of double high char
                         ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0); // Scale position for double height
 
-                    double drawX = 0;
+                    double drawX = TextPadding.Left;
+                    drawY += TextPadding.Top;
                     foreach (var textSpan in textRow.Spans)
                     {
                         var runWidth = CharacterWidth * (textSpan.Text.Length);
@@ -873,8 +883,8 @@ namespace VtNetCore.Avalonia
                 CharacterHeight = size.Height;
             }
 
-            int columns = Convert.ToInt32(Math.Floor(Bounds.Size.Width / CharacterWidth));
-            int rows = Convert.ToInt32(Math.Floor(Bounds.Size.Height / CharacterHeight));
+            int columns = Convert.ToInt32(Math.Floor((Bounds.Size.Width - TextPadding.Left - TextPadding.Right) / CharacterWidth));
+            int rows = Convert.ToInt32(Math.Floor((Bounds.Size.Height - TextPadding.Top - TextPadding.Bottom) / CharacterHeight));
             if (Columns != columns || Rows != rows)
             {
                 Columns = columns;
