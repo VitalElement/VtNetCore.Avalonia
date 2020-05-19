@@ -11,7 +11,10 @@
         <Setter Property="Cursor" Value="IBeam" />
         <Setter Property="Template">
             <ControlTemplate>
+              <Grid ColumnDefinitions="*, Auto">
                 <Panel />
+                <ScrollBar Grid.Column="1" Orientation="Vertical" Minimum="0" Name="ScrollBar" Visibility="Visible"></ScrollBar>                    
+              </Grid>
             </ControlTemplate>
         </Setter>
     </Style>

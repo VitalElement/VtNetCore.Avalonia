@@ -23,14 +23,14 @@ namespace VtNetCore.Avalonia
         private CompositeDisposable _disposables;
         private CompositeDisposable _terminalDisposables;
 
-        private VirtualTerminalController _terminal;
-
         private int BlinkShowMs { get; set; } = 600;
         private int BlinkHideMs { get; set; } = 300;
 
         private string InputBuffer { get; set; } = "";
 
         DispatcherTimer blinkDispatcher;
+
+        ScrollBar scrollBar;
 
         // Use Euclid's algorithm to calculate the
         // greatest common divisor (GCD) of two numbers.
@@ -94,7 +94,16 @@ namespace VtNetCore.Avalonia
         public int Columns { get; private set; } = -1;
         public int Rows { get; private set; } = -1;
         public DataConsumer Consumer { get; set; }
-        public int ViewTop { get; set; } = 0;
+
+        private int viewTop = 0;
+        public int ViewTop { 
+            get => viewTop; 
+            set 
+            {
+                viewTop = value;
+                if(scrollBar != null) scrollBar.Value = ViewTop;
+            }
+        }
         public string WindowTitle { get; set; } = "Session";
 
         public bool ViewDebugging { get; set; }
@@ -135,8 +144,6 @@ namespace VtNetCore.Avalonia
             blinkDispatcher.Tick += (sender, e) => InvalidateVisual();
             blinkDispatcher.Interval = TimeSpan.FromMilliseconds(GCD(BlinkShowMs, BlinkHideMs));
             //blinkDispatcher.Start();
-
-
 
             this.GetObservable(TerminalProperty)
                 .ObserveOn(AvaloniaScheduler.Instance)
@@ -199,6 +206,17 @@ namespace VtNetCore.Avalonia
                     connection.SetTerminalWindowSize(Columns, Rows, 800, 600);
                 }
             });
+        }
+
+        protected override void OnTemplateApplied(TemplateAppliedEventArgs e)
+        {
+            base.OnTemplateApplied(e);
+            scrollBar = e.NameScope.Find<ScrollBar>("ScrollBar");
+
+            scrollBar.Scroll += (o, i) =>
+            {
+                SetScroll((int)i.NewValue);
+            };
         }
 
         public static readonly StyledProperty<IConnection> ConnectionProperty =
@@ -327,23 +345,30 @@ namespace VtNetCore.Avalonia
                 }
             }
             else
-            {
-                int oldViewTop = ViewTop;
-
-                ViewTop -= (int)(e.Delta.Y / 40);
-
-                if (ViewTop < 0)
-                    ViewTop = 0;
-                else if (ViewTop > Terminal.ViewPort.TopRow)
-                    ViewTop = Terminal.ViewPort.TopRow;
-
-                if (oldViewTop != ViewTop)
-                    InvalidateVisual();
+            {               
+                SetScroll((int)(ViewTop - e.Delta.Y * 2));                
             }
+        }
+
+        protected void SetScroll(int value)
+        {
+            int oldViewTop = ViewTop;
+
+            ViewTop = value;
+
+            if (ViewTop < 0)
+                ViewTop = 0;
+            else if (ViewTop > Terminal.ViewPort.TopRow)
+                ViewTop = Terminal.ViewPort.TopRow;
+
+            if (oldViewTop != ViewTop)
+                InvalidateVisual();
         }
 
         protected override void OnPointerMoved(PointerEventArgs e)
         {
+            if (!(e.Source is VirtualTerminalControl)) return;
+
             var pointer = e.GetPosition(this);
             var position = ToPosition(pointer);
 
@@ -665,7 +690,7 @@ namespace VtNetCore.Avalonia
         {
             var cursorY = cursorPosition.Row;
 
-            if (cursorY >= 0 && spans != null)
+            if (cursorY >= 0 && spans != null && cursorY < spans.Count)
             {
                 var textRow = spans[cursorY];
 
@@ -715,13 +740,16 @@ namespace VtNetCore.Avalonia
             bool showCursor = false;
             IBrush cursorColor = Brushes.Green;
 
+            scrollBar.Maximum = Terminal.ViewPort.TopRow;
+            scrollBar.ViewportSize = Bounds.Height;
+
             if (Terminal != null)
             {
                 lock (Terminal)
                 {
                     spans = Terminal.ViewPort.GetPageSpans(ViewTop, Rows, Columns, TextSelection);
                     showCursor = Terminal.CursorState.ShowCursor;
-                    cursorPosition = Terminal.ViewPort.CursorPosition.Clone();
+                    cursorPosition = new TextPosition(Terminal.ViewPort.CursorPosition.Column, Terminal.ViewPort.CursorPosition.Row - ViewTop + Terminal.ViewPort.TopRow);
                     cursorColor = GetSolidColorBrush(Terminal.CursorState.Attributes.WebColor);
                 }
             }
