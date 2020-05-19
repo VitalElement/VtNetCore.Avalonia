@@ -10,28 +10,7 @@
     <vm:MainWindowViewModel/>
   </Design.DataContext>
 
-  <Window.Styles>
-    <Style Selector="vt100|VirtualTerminalControl">
-      <Setter Property="Background" Value="{DynamicResource ThemeControlMidBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLightBrush}"/>
-      <Setter Property="BorderThickness" Value="{DynamicResource ThemeBorderThickness}"/>
-      <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
-      <Setter Property="Focusable" Value="True" />
-      <Setter Property="Padding" Value="4"/>
-      <Setter Property="FontSize" Value="14" />
-      <Setter Property="FontWeight" Value="Thin" />
-      <Setter Property="Cursor" Value="IBeam" />
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Panel />
-        </ControlTemplate>
-      </Setter>
-    </Style>
-  </Window.Styles>
-  <Grid>
-    <TextBlock Text="Test"></TextBlock>
-    <vt100:VirtualTerminalControl Width="100" Height="100"/>
-  </Grid>
+  <vt100:VirtualTerminalControl Width="100" Height="100"/>
 
 
 </Window>

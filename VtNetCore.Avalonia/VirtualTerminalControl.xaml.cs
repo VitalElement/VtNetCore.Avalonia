@@ -718,8 +718,8 @@ namespace VtNetCore.Avalonia
                     var drawY = (cursorY * CharacterHeight) * ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0);
 
                     var cursorRect = new Rect(
-                        drawX,
-                        drawY,
+                        drawX + TextPadding.Left,
+                        drawY + TextPadding.Top,
                         CharacterWidth,
                         CharacterHeight + 0.9
                     );
