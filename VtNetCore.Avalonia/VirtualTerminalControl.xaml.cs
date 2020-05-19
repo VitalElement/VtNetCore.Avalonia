@@ -892,7 +892,7 @@ namespace VtNetCore.Avalonia
                 ResizeTerminal();
 
                 if (Connection != null)
-                    Connection.SetTerminalWindowSize(columns, rows, 800, 600);
+                    Connection.SetTerminalWindowSize(columns, rows, (int)Bounds.Width, (int)Bounds.Height);
             }
         }
 
