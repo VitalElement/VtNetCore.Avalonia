@@ -629,8 +629,6 @@ namespace VtNetCore.Avalonia
 
                         context.FillRectangle(GetSolidColorBrush(textSpan.BackgroundColor), bounds);
 
-                        Console.WriteLine(textSpan.BackgroundColor);
-
                         drawX += CharacterWidth * (textSpan.Text.Length);
                     }
 
