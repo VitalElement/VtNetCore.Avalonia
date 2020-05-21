@@ -587,6 +587,7 @@ namespace VtNetCore.Avalonia
 
         public IBrush GetSolidColorBrush(string hex)
         {
+            if (hex == "#000000") return Brushes.Transparent;
             byte a = 255; // (byte)(Convert.ToUInt32(hex.Substring(0, 2), 16));
             byte r = (byte)(Convert.ToUInt32(hex.Substring(1, 2), 16));
             byte g = (byte)(Convert.ToUInt32(hex.Substring(3, 2), 16));
@@ -614,7 +615,8 @@ namespace VtNetCore.Avalonia
                         (lineY - (textRow.DoubleHeightBottom ? CharacterHeight : 0)) *      // Offset position upwards for bottom of double high char
                         ((textRow.DoubleHeightBottom | textRow.DoubleHeightTop) ? 0.5 : 1.0); // Scale position for double height
 
-                    double drawX = 0;
+                    double drawX = TextPadding.Left;
+                    drawY += TextPadding.Top;
                     foreach (var textSpan in textRow.Spans)
                     {
                         var bounds =
@@ -626,6 +628,8 @@ namespace VtNetCore.Avalonia
                             );
 
                         context.FillRectangle(GetSolidColorBrush(textSpan.BackgroundColor), bounds);
+
+                        Console.WriteLine(textSpan.BackgroundColor);
 
                         drawX += CharacterWidth * (textSpan.Text.Length);
                     }
