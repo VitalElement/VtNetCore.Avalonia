@@ -587,7 +587,6 @@ namespace VtNetCore.Avalonia
 
         public IBrush GetSolidColorBrush(string hex)
         {
-            if (hex == "#000000") return Brushes.Transparent;
             byte a = 255; // (byte)(Convert.ToUInt32(hex.Substring(0, 2), 16));
             byte r = (byte)(Convert.ToUInt32(hex.Substring(1, 2), 16));
             byte g = (byte)(Convert.ToUInt32(hex.Substring(3, 2), 16));
