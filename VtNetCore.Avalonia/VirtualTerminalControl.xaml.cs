@@ -635,7 +635,7 @@ namespace VtNetCore.Avalonia
 
                         var color = GetSolidColorBrush(textSpan.ForgroundColor);
 
-                        var typeface = new Typeface(textFormat.FontFamily, textSpan.Bold ? FontWeight.Bold : FontWeight.Light, FontStyle.Normal);
+                        var typeface = new Typeface(textFormat.FontFamily, FontStyle.Normal, textSpan.Bold ? FontWeight.Bold : FontWeight.Light);
 
                         var textLayout = new FormattedText()
                         {
@@ -705,7 +705,7 @@ namespace VtNetCore.Avalonia
         public override void Render(DrawingContext context)
         {
             var textFormat =
-                new Typeface(FontFamily, FontWeight, FontStyle);            
+                new Typeface(FontFamily, FontStyle, FontWeight);            
 
             ProcessTextFormat(context, textFormat);
 
@@ -744,7 +744,7 @@ namespace VtNetCore.Avalonia
 
         private void AnnotateView(DrawingContext context)
         {
-            var lineNumberFormat = new Typeface(FontFamily, FontWeight, FontStyle);
+            var lineNumberFormat = new Typeface(FontFamily, FontStyle, FontWeight);
 
             for (var i = 0; i < Rows; i++)
             {
