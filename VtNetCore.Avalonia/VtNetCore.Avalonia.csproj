@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,12 +13,33 @@
     </AvaloniaResource>
   </ItemGroup>
 
+	<ItemGroup>
+		<Compile Update="**\*.axaml.cs">
+			<DependentUpon>%(Filename)</DependentUpon>
+		</Compile>
+		<AvaloniaResource Include="**\*.axaml">
+			<SubType>Designer</SubType>
+		</AvaloniaResource>
+	</ItemGroup>
+
   <ItemGroup>
-    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia" Version="0.10.16" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VtNetCore\VtNetCore\VtNetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Update="VirtualTerminalControl.axaml">
+      <Generator>MSBuild:Compile</Generator>
+    </AvaloniaResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="VirtualTerminalControl.axaml.cs">
+      <DependentUpon>VirtualTerminalControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>
