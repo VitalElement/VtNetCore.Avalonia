@@ -38,7 +38,7 @@
 
   <ItemGroup>
     <Compile Update="VirtualTerminalControl.axaml.cs">
-      <DependentUpon>VirtualTerminalControl.xaml</DependentUpon>
+      <DependentUpon>VirtualTerminalControl.axaml</DependentUpon>
     </Compile>
   </ItemGroup>
 
